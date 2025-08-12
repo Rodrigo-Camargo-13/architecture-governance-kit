@@ -1,0 +1,2 @@
+# Ignore de exemplo (justifique sempre)
+CVE-2023-12345

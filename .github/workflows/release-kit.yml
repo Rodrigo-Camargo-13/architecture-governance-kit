@@ -1,0 +1,17 @@
+name: Release Kit
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Tag (ex: v1.0.0)"
+        required: true
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git tag ${{ inputs.version }}
+          git push origin ${{ inputs.version }}

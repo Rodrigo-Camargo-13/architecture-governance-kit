@@ -1,0 +1,39 @@
+name: Quality Gate (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      enable_dotnet:
+        required: false
+        type: boolean
+        default: true
+      enable_node:
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  checks: write
+
+jobs:
+  run-quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        if: ${{ inputs.enable_node }}
+        uses: ./.github/actions/setup-node
+
+      - name: Setup .NET
+        if: ${{ inputs.enable_dotnet }}
+        uses: ./.github/actions/setup-dotnet
+
+      - name: Run Quality Gate
+        uses: ./.github/actions/quality-gate

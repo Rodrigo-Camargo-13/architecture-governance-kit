@@ -1,0 +1,32 @@
+name: CodeQL (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: "Languages to analyze"
+        required: false
+        type: string
+        default: "javascript-typescript,csharp,python"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ${{ fromJSON('["' + replace(inputs.languages, ',', '","') + '"]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

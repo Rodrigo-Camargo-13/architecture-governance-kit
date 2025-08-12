@@ -1,0 +1,12 @@
+name: "Setup .NET"
+description: "Instala .NET 8 e restaura dependências (se houver)."
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "8.0.x"
+    - if: ${{ hashFiles('**/*.sln','**/*.csproj') != '' }}
+      run: |
+        dotnet restore
+      shell: bash

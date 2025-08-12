@@ -1,0 +1,72 @@
+name: "Quality Gate"
+description: "Executa linters, ADR-lint, fronteiras arquiteturais, SAST, SCA e score."
+runs:
+  using: "composite"
+  steps:
+    - name: Install Python deps
+      run: pip install --disable-pip-version-check --no-cache-dir markdown-link-check==3.11.2
+      shell: bash
+
+    - name: Lint Markdown
+      run: npx markdownlint "**/*.md" -c tools/docs/.markdownlint.json || true
+      shell: bash
+
+    - name: ADR Lint
+      run: python tools/adr/adr_lint.py
+      shell: bash
+
+    - name: Dependency boundaries (JS/TS)
+      if: ${{ hashFiles('**/package.json') != '' }}
+      run: npx dependency-cruiser -c tools/arch/dependency-cruiser.config.cjs --include-only "^src" --output-type err || true
+      shell: bash
+
+    - name: .NET build + NetArchTest
+      if: ${{ hashFiles('**/*.csproj') != '' }}
+      run: |
+        dotnet build -c Release --nologo
+        dotnet test tools/arch/netarchtest.sample.csproj -c Release --nologo --logger "trx;LogFileName=netarchtest.trx" || true
+      shell: bash
+
+    - name: Gitleaks
+      uses: gitleaks/gitleaks-action@v2
+      with:
+        config-path: tools/sec/.gitleaks.toml
+        redact: "true"
+
+    - name: Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: tools/sec/semgrep.yml
+        generateSarif: "1"
+        sarifFile: "semgrep.sarif"
+
+    - name: Upload Semgrep SARIF
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: semgrep.sarif
+
+    - name: Trivy (filesystem)
+      uses: aquasecurity/trivy-action@0.24.0
+      with:
+        scan-type: fs
+        ignorefile: tools/sec/trivy-ignore.txt
+        format: sarif
+        output: trivy.sarif
+        severity: CRITICAL,HIGH
+
+    - name: Upload Trivy SARIF
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: trivy.sarif
+
+    - name: Quality Gate Score
+      run: python scripts/quality_gate_score.py
+      shell: bash
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "### Architecture Governance Kit - Quality Gate" >> $GITHUB_STEP_SUMMARY
+        echo "- Markdownlint, ADR Lint, Dependency-Cruiser" >> $GITHUB_STEP_SUMMARY
+        echo "- NetArchTest (.NET), Gitleaks, Semgrep, Trivy" >> $GITHUB_STEP_SUMMARY
+      shell: bash

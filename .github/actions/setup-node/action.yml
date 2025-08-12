@@ -1,0 +1,10 @@
+name: "Setup Node"
+description: "Instala Node.js e dependências NPM do repositório alvo (se houver)."
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - run: npm ci || npm i --no-audit --no-fund
+      shell: bash

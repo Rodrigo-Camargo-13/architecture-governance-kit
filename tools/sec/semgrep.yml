@@ -1,0 +1,14 @@
+rules:
+  - id: generic-dangerous-eval
+    languages: [javascript, typescript, python]
+    message: Evite uso de eval/exec.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+
+  - id: no-hardcoded-credentials
+    languages: [generic]
+    message: Possível credencial hardcoded.
+    severity: WARNING
+    pattern: /(?i)(password|secret|apikey|token)\s*[:=]\s*["'][^"']+["']/
