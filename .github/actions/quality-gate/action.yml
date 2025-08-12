@@ -1,42 +1,57 @@
 name: "Quality Gate"
-description: "Executa linters, ADR-lint, fronteiras arquiteturais, SAST, SCA e score."
+description: "Executa linters, ADR-lint, fronteiras arquiteturais, SAST, SCA e score usando os assets internos do kit."
 runs:
   using: "composite"
   steps:
-    - name: Install Python deps
-      run: pip install --disable-pip-version-check --no-cache-dir markdown-link-check==3.11.2
+    # Define uma variável de conveniência para acessar os assets do kit
+    - name: Define KIT_ROOT
       shell: bash
+      run: echo "KIT_ROOT=${{ github.action_path }}/../.." >> $GITHUB_ENV
 
-    - name: Lint Markdown
-      run: npx markdownlint "**/*.md" -c tools/docs/.markdownlint.json || true
+    # ---------- Documentação ----------
+    - name: Lint Markdown (markdownlint-cli)
       shell: bash
+      run: |
+        npx -y markdownlint-cli@0.41.0 "**/*.md" -c "$KIT_ROOT/tools/docs/.markdownlint.json" || true
 
-    - name: ADR Lint
-      run: python tools/adr/adr_lint.py
+    # ---------- ADR Lint ----------
+    - name: ADR Lint (docs/adr ou architecture/adr)
       shell: bash
+      run: |
+        python "$KIT_ROOT/tools/adr/adr_lint.py"
 
-    - name: Dependency boundaries (JS/TS)
+    # ---------- Fronteiras arquiteturais JS/TS ----------
+    - name: Dependency boundaries (dependency-cruiser)
       if: ${{ hashFiles('**/package.json') != '' }}
-      run: npx dependency-cruiser -c tools/arch/dependency-cruiser.config.cjs --include-only "^src" --output-type err || true
       shell: bash
+      run: |
+        npx -y dependency-cruiser@16.8.0 \
+          -c "$KIT_ROOT/tools/arch/dependency-cruiser.config.cjs" \
+          --include-only "^src" \
+          --output-type err || true
 
-    - name: .NET build + NetArchTest
+    # ---------- .NET: build + NetArchTest ----------
+    - name: .NET build + NetArchTest (regras de arquitetura)
       if: ${{ hashFiles('**/*.csproj') != '' }}
+      shell: bash
       run: |
         dotnet build -c Release --nologo
-        dotnet test tools/arch/netarchtest.sample.csproj -c Release --nologo --logger "trx;LogFileName=netarchtest.trx" || true
-      shell: bash
+        dotnet test "$KIT_ROOT/tools/arch/netarchtest.sample.csproj" \
+          -c Release --nologo \
+          --logger "trx;LogFileName=netarchtest.trx" || true
 
-    - name: Gitleaks
+    # ---------- Segurança: Gitleaks ----------
+    - name: Secrets scanning (gitleaks)
       uses: gitleaks/gitleaks-action@v2
       with:
-        config-path: tools/sec/.gitleaks.toml
+        config-path: ${{ env.KIT_ROOT }}/tools/sec/.gitleaks.toml
         redact: "true"
 
-    - name: Semgrep
+    # ---------- Segurança: Semgrep (SAST) ----------
+    - name: Semgrep SAST
       uses: returntocorp/semgrep-action@v1
       with:
-        config: tools/sec/semgrep.yml
+        config: ${{ env.KIT_ROOT }}/tools/sec/semgrep.yml
         generateSarif: "1"
         sarifFile: "semgrep.sarif"
 
@@ -45,11 +60,12 @@ runs:
       with:
         sarif_file: semgrep.sarif
 
-    - name: Trivy (filesystem)
+    # ---------- Segurança: Trivy (SCA/IaC) ----------
+    - name: Trivy filesystem scan
       uses: aquasecurity/trivy-action@0.24.0
       with:
         scan-type: fs
-        ignorefile: tools/sec/trivy-ignore.txt
+        ignorefile: ${{ env.KIT_ROOT }}/tools/sec/trivy-ignore.txt
         format: sarif
         output: trivy.sarif
         severity: CRITICAL,HIGH
@@ -59,14 +75,18 @@ runs:
       with:
         sarif_file: trivy.sarif
 
+    # ---------- Score agregado ----------
     - name: Quality Gate Score
-      run: python scripts/quality_gate_score.py
       shell: bash
+      run: |
+        python "$KIT_ROOT/scripts/quality_gate_score.py"
 
+    # ---------- Summary ----------
     - name: Summary
       if: always()
+      shell: bash
       run: |
-        echo "### Architecture Governance Kit - Quality Gate" >> $GITHUB_STEP_SUMMARY
+        echo "### Architecture Governance Kit - Quality Gate ✅" >> $GITHUB_STEP_SUMMARY
         echo "- Markdownlint, ADR Lint, Dependency-Cruiser" >> $GITHUB_STEP_SUMMARY
         echo "- NetArchTest (.NET), Gitleaks, Semgrep, Trivy" >> $GITHUB_STEP_SUMMARY
-      shell: bash
+        echo "- Score agregado impresso nos logs" >> $GITHUB_STEP_SUMMARY
