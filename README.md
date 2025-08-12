@@ -1,11 +1,10 @@
-````markdown
 # Architecture Governance Kit
 
 Kit reutilizável de **quality gates**, **segurança** e **aderência arquitetural** para toda a organização.
 
 ---
 
-## Como usar em outro repositório
+## 📌 Como usar em outro repositório
 
 Crie `.github/workflows/quality-gate.yml` no repositório alvo:
 
@@ -31,7 +30,11 @@ jobs:
       checks: write
 ````
 
-Se quiser usar o **CodeQL** do kit:
+---
+
+## 🔍 Usar CodeQL do Kit
+
+Adicione ao seu workflow:
 
 ```yaml
 jobs:
@@ -46,7 +49,7 @@ jobs:
 
 ---
 
-## Conteúdo do kit
+## 📂 Conteúdo do Kit
 
 * **Composite Actions**: `setup-node`, `setup-dotnet`, `quality-gate`
 * **Workflows reutilizáveis**: Quality Gate, CodeQL, Release
@@ -55,17 +58,18 @@ jobs:
 
 ---
 
-## Versionamento
+## 🏷️ Versionamento
 
-Use **tags SemVer** (ex.: `v1.0.0`).
-Os repositórios consumidores fixam a versão por tag e atualizam quando desejarem.
+* Segue **SemVer** (ex.: `v1.0.0`)
+* Repositórios consumidores **fixam a versão por tag** e atualizam quando desejarem
 
 ---
 
-## Licença
+## 📜 Licença
 
 Escolha a licença conforme política interna (MIT/Apache-2.0).
-Exemplo MIT:
+
+**Exemplo MIT:**
 
 ```text
 MIT License
@@ -75,7 +79,7 @@ Copyright (c) 2025 Rodrigo...
 
 ---
 
-## Publicar a primeira versão
+## 🚀 Publicar a primeira versão
 
 Após o push do `main`, crie a tag:
 
@@ -89,3 +93,8 @@ Agora, em qualquer repositório consumidor, basta referenciar:
 ```yaml
 uses: Rodrigo-Camargo-13/architecture-governance-kit/.github/workflows/quality-gate.yml@v1.0.0
 ```
+
+```
+
+---
+
